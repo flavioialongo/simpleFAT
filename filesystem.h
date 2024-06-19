@@ -74,22 +74,27 @@ typedef struct {
 
 
 // Function to initialize a FAT-formatted "disk" 
-uint8_t* fat_initialize(const char* image_path, FATBS *fbs);
+int fat_initialize(const char* image_path);
 
 // Function to retrieve the pointer to the root directory
-uint8_t *root_address(uint8_t* image_file, FATBS *fbs);
+uint8_t *root_address();
 
 // Function to retrieve the pointer to the data area
-uint8_t *data_address(uint8_t* image_file, FATBS *fbs);
+uint8_t *data_address();
 
 
 
-int create_file(uint8_t* image_file, FATBS *fbs, const char* name, const char* ext, uint32_t size, const uint8_t* filedata);
-int read_file(uint8_t *image_file, FATBS *fbs, const char* path, char* buffer);
-int free_cluster_index(uint8_t* image_file, FATBS *fbs);
+int create_file(const char* name, const char* ext, uint32_t size, const uint8_t* filedata);
+int read_file(const char* path, char* buffer);
 
-void print_root_content(uint8_t *image_file, FATBS *fbs);
-void print_image(uint8_t *image_file, FATBS *fbs, unsigned int max_bytes_to_read);
+int free_cluster_index();
+
+
+
+
+
+void print_root_content();
+void print_image(unsigned int max_bytes_to_read);
 
 
 

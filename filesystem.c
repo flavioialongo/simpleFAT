@@ -1,18 +1,22 @@
 #include "filesystem.h"
 
+//global variables
 
+uint8_t *image_file; //the actual image
+FATBS *fbs;          //info for the image
 
-uint8_t *root_address(uint8_t* image_file, FATBS *fbs){
+uint8_t *root_address(){
     return image_file + fbs->fat_size;
 }
 
 
-uint8_t *data_address(uint8_t* image_file, FATBS *fbs){
+uint8_t *data_address(){
     return image_file + fbs->fat_size+fbs->root_size;
 }
 
-uint8_t* fat_initialize(const char* image_path, FATBS *fbs){
+int fat_initialize(const char* image_path){
     
+    fbs = malloc(sizeof(FATBS));
     fbs->bytes_per_sector = SECTOR_SIZE;
     fbs->root_entry_count = ROOT_DIR_ENTRIES;
     fbs->sectors_per_cluster = CLUSTER_SIZE;
@@ -32,19 +36,19 @@ uint8_t* fat_initialize(const char* image_path, FATBS *fbs){
 
     if(fd==-1){
         printf("Error creating or opening the image file\n");
-        return NULL;
+        return -1;
     }
     if(ftruncate(fd, fbs->total_sectors*fbs->bytes_per_sector)){
         printf("Error creating the image file\n");
-        return NULL;
+        return -1;
     }
 
 
-    uint8_t *image_file = mmap(NULL, fbs->total_sectors*fbs->bytes_per_sector, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    image_file= mmap(NULL, fbs->total_sectors*fbs->bytes_per_sector, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
     if(image_file == MAP_FAILED){
         printf("Cannot mmap the image file\n");
-        return NULL;
+        return -1;
     }
 
     uint8_t *root = root_address(image_file, fbs);
@@ -60,13 +64,13 @@ uint8_t* fat_initialize(const char* image_path, FATBS *fbs){
     memset(data, FAT_EMPTY, fbs->data_size);
 
 
-    return image_file;
+    return 0;
 
 }
 
 
 
-int free_cluster_index(uint8_t* image_file, FATBS *fbs){
+int free_cluster_index(){
 
     int cluster = -1;
 
@@ -81,7 +85,7 @@ int free_cluster_index(uint8_t* image_file, FATBS *fbs){
 }
 
 
-int create_file(uint8_t* image_file, FATBS *fbs, const char* name, const char* ext, uint32_t size, const uint8_t* filedata){
+int create_file(const char* name, const char* ext, uint32_t size, const uint8_t* filedata){
 
     // retrieve the starting points of root directory and data area
     uint8_t* root = root_address(image_file, fbs);
@@ -110,7 +114,7 @@ int create_file(uint8_t* image_file, FATBS *fbs, const char* name, const char* e
     entry->is_directory = false;
     
 
-    int cluster = free_cluster_index(image_file, fbs);
+    int cluster = free_cluster_index();
     if(cluster==-1){
         printf("No free cluster available \n");
         return -1;
@@ -145,7 +149,8 @@ int create_file(uint8_t* image_file, FATBS *fbs, const char* name, const char* e
 }
 
 
-void print_root_content(uint8_t *root, FATBS *fbs){
+void print_root_content(){
+    uint8_t *root = root_address();
     // Display the contents of the root directory
     for (uint32_t i = 0; i < fbs->root_entry_count; i++) {
         DirectoryEntry* entry = (DirectoryEntry*)&root[i * 32];
@@ -155,7 +160,7 @@ void print_root_content(uint8_t *root, FATBS *fbs){
     }
 }
 
-void print_image(uint8_t *image_file, FATBS *fbs, unsigned int max_bytes_to_read){
+void print_image(unsigned int max_bytes_to_read){
 
 
     if(max_bytes_to_read>fbs->bytes_per_sector*fbs->total_sectors){
@@ -171,7 +176,7 @@ void print_image(uint8_t *image_file, FATBS *fbs, unsigned int max_bytes_to_read
 
 // TODO find_file
 
-int read_file(uint8_t *image_file, FATBS *fbs, const char* path, char* buffer){
+int read_file(const char* path, char* buffer){
 
     // TODO tokenize path 
     printf("BUFFER: %s\n", path);
