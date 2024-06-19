@@ -2,6 +2,11 @@
     "files.associations": {
         "*.html": "html",
         "*.ejs": "html",
-        "filesystem.h": "c"
-    }
+        "filesystem.h": "c",
+        "mman.h": "c",
+        "stdio.h": "c",
+        "file.h": "c",
+        "disk.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }
