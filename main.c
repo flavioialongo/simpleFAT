@@ -10,29 +10,94 @@ int main(int argc, char** argv) {
     char* imgpath = argv[1];
     // Initialize disk
     int res = fat_initialize(imgpath);
-    if(res){
-        printf("Cannot initialize FAT image\n");
+    if(res) goto cleanup;
+    // Create directory ROOT in root
+    res = create_directory("ROOT");
+    if(res) goto cleanup;
+
+    list_directory();
+
+
+    res = change_directory("ROOT");
+    if(res) goto cleanup;
+
+    const char file1[] = "Hello, FAT32(1)!";
+    res = create_file("HELLO", "TXT", sizeof(file1), (uint8_t*)file1);  
+    if(res) goto cleanup;
+    
+    list_directory();
+
+
+    res = create_directory("TEST");
+    if(res) goto cleanup;
+    
+    res = change_directory("TEST");
+    if(res) goto cleanup;
+
+    res = create_file("TESTFILE1", "TXT", sizeof(file1), (uint8_t*)file1);  
+    if(res) goto cleanup;
+    
+    res = create_file("TESTFILE3", "IMG", sizeof(file1), (uint8_t*)file1);  
+    if(res) goto cleanup;
+
+
+
+    res = create_file("TESTFILE2", "JPG", sizeof(file1), (uint8_t*)file1);  
+    if(res) goto cleanup;
+
+    res = create_directory("TESTDIRE");  
+    if(res) goto cleanup;
+
+    list_directory();
+    res = change_directory("TESTDIRE");  
+    if(res) goto cleanup;
+    
+    res = create_file("REM", "TXT", sizeof(file1), (uint8_t*)file1);
+    if(res) goto cleanup;
+
+    list_directory();
+
+    res = erase_file("REM");
+    if(res) goto cleanup;
+    list_directory();
+
+
+cleanup:
+    if(res == DIRCREATERROR){
+        printf("Cannot create new directory in %s\n", get_current_directory()->filename);
         return -1;
     }
-    // Create a file
-    const char fileData1[] = "Hello, FAT32(1)!";
-    create_file("HELLO", "TXT", sizeof(fileData1), (uint8_t*)fileData1);  
-    const char fileData2[] = "Hello, FAT32!(2)";
-    create_file("CIAO", "JPG", sizeof(fileData2), (uint8_t*)fileData2);  
-    const char fileData3[] = "Hello, FAT132!(3)";
-    create_file("HOLA", "IMG", sizeof(fileData3), (uint8_t*)fileData3);  
-    print_root_content();
+    if(res == FILECREATERROR){
+        printf("Cannot create file in directory %s \n", get_current_directory()->filename);
+        return -1;
+    }
+    if(res == CDERROR){
+        printf("No directory found with that name\n");
+        return -1;
+    }
+    if(res == INITERROR){
+        printf("Initialize error\n");
+        return -1;
+    }
+    if(res == FILEDELERROR){
+        printf("No file found with that name\n");
+    }
 
-    char *buffer = malloc(sizeof(char)*(strlen(fileData1)+1));
+
+    /*
+    char *buffer = malloc(sizeof(char)*(strlen(file1)+1));
+
 
     res = read_file("HELLO", buffer);
-    if(res<sizeof(fileData1)){
+    if(res<sizeof(file1)){
         printf("Invalid read\n");
         free(buffer);
         return -1;
     }
     
     printf("READ: %s\n", buffer);
+    
     free(buffer);
+    */
     return 0;
 }
