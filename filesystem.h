@@ -9,70 +9,71 @@
 
 
 #define SECTOR_SIZE 512
-#define CLUSTER_SIZE 8
+#define SECTOR_PER_CLUSTER 1
 #define TOTAL_SECTORS 65563
-#define FAT_ENTRIES 512
-#define ROOT_DIR_ENTRIES 224
+#define MAX_DIR_ENTRIES 65536
 
 #define FAT_EMPTY 0x00000000
-#define FAT_EOF 0xFFFFFFF8
+#define FAT_EOF 0x0FFFFFF8
 
 
 
 typedef struct{
 
     // Number of bytes in a sector
-	uint32_t bytes_per_sector;
+	int bytes_per_sector;
 
     // Number of sectors in a cluster
-	uint32_t sectors_per_cluster;
+	int sectors_per_cluster;
     
     // Number of FAT entries
-	uint32_t fat_entries;
+	int fat_entries;
     
-    // FAT size in bytes
-	uint32_t fat_size;
+    // Size of clusters
+    int cluster_size;
 
-    // Number of entries in the Root Directory
-	uint32_t root_entry_count;
-    
-    // Number of sectors for the Root Directory
-    uint32_t root_sectors;
-    
-    // Size in bytes of Root Directory
-    uint32_t root_size;
+    // FAT size in bytes
+	int fat_size;
 
     // Number of sectors for FAT
-    uint32_t fat_sectors;
+    int fat_sectors;
+
+    // Number of entries in the Root Directory
+	int root_entry_count;
+    
+    // Number of sectors for the Root Directory
+    int root_sectors;
+    
+    // Size in bytes of Root Directory
+    int root_size;
 
     // Number of sectors for the Data Area
-    uint32_t data_sectors;
+    int data_sectors;
 
     // Size in bytes of the Data Area
-    uint32_t data_size;
+    int data_size;
 
     // Size in bytes of Directories Entry
-    uint32_t directory_size;
+    int directory_size;
 
     // Total number of sectors
-	uint32_t total_sectors;
+	int total_sectors;
 }FATBS;
 
 
 #define DIRECTORY_SIZE 32
 #define DELETED_DIR_ENTRY 0xE5
+
 typedef struct DirectoryEntry{
     char filename[8];           // Filename (8 characters)
     char ext[3];                // Extension (3 characters)
 
-    bool is_directory;     
+    char is_directory;     
 
     struct DirectoryEntry* parent_directory;     
-    uint16_t create_time;       // Creation time
-    uint16_t create_date;       // Creation date
-    uint16_t first_cluster;     // First cluster number
-    uint32_t size;         // File size in bytes
-
+    int first_cluster;     // First cluster number
+    int size;              // File size in bytes
+    int entry_count;
 } __attribute__((packed)) DirectoryEntry;
 
 
@@ -89,30 +90,30 @@ typedef struct DirectoryEntry{
 int fat_initialize(const char* image_path);
 
 // Function to retrieve the pointer to the root directory
-uint8_t *root_address();
+char *root_address();
 
 // Function to retrieve the pointer to the data area
-uint8_t *data_address();
+char *data_address();
 
+FATBS* get_fbs();
+DirectoryEntry* find_free_directory_entry();
 DirectoryEntry* get_current_directory();
+int free_cluster_index();
+
+
 int create_directory(const char* name);
-int create_file(const char* name, const char* ext, uint32_t size, const uint8_t* filedata);
+int create_file(const char* name, const char* ext, int size, const char* filedata);
 int read_file(const char* filename, char* buffer);
 int erase_file(const char* filename);
 
 
 
 
-
 int change_directory(const char* dir_name);
 void list_directory();
-int free_cluster_index();
 
 
 
-
-
-void print_root_content();
 void print_image(unsigned int max_bytes_to_read);
 
 

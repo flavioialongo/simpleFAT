@@ -7,22 +7,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+
+
     char* imgpath = argv[1];
     // Initialize disk
     int res = fat_initialize(imgpath);
     if(res) goto cleanup;
-    // Create directory ROOT in root
-    res = create_directory("ROOT");
-    if(res) goto cleanup;
-
-    list_directory();
-
-
-    res = change_directory("ROOT");
-    if(res) goto cleanup;
-
     const char file1[] = "Hello, FAT32(1)!";
-    res = create_file("HELLO", "TXT", sizeof(file1), (uint8_t*)file1);  
+    res = create_file("HELLO", "TXT", sizeof(file1), (char*)file1);  
     if(res) goto cleanup;
     
     list_directory();
@@ -34,25 +26,25 @@ int main(int argc, char** argv) {
     res = change_directory("TEST");
     if(res) goto cleanup;
 
-    res = create_file("TESTFILE1", "TXT", sizeof(file1), (uint8_t*)file1);  
+    res = create_file("TESTFI1", "TXT", sizeof(file1), (char*)file1);  
     if(res) goto cleanup;
     
-    res = create_file("TESTFILE3", "IMG", sizeof(file1), (uint8_t*)file1);  
+    res = create_file("TESTFI3", "IMG", sizeof(file1), (char*)file1);  
     if(res) goto cleanup;
 
-
-
-    res = create_file("TESTFILE2", "JPG", sizeof(file1), (uint8_t*)file1);  
+    res = create_file("TESTFI2", "JPG", sizeof(file1), (char*)file1);  
     if(res) goto cleanup;
 
-    res = create_directory("TESTDIRE");  
+    res = create_directory("TESTDIR");  
     if(res) goto cleanup;
 
     list_directory();
-    res = change_directory("TESTDIRE");  
+
+
+    res = change_directory("TESTDIR");  
     if(res) goto cleanup;
     
-    res = create_file("REM", "TXT", sizeof(file1), (uint8_t*)file1);
+    res = create_file("REM", "TXT", sizeof(file1), (char*)file1);
     if(res) goto cleanup;
 
     list_directory();
