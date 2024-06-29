@@ -15,7 +15,7 @@
 
 #define FAT_EMPTY 0x00000000
 #define FAT_EOF 0x0FFFFFF8
-
+#define FAT_INUSE 0xFFFFFFFF
 
 
 typedef struct{
@@ -82,7 +82,7 @@ typedef struct DirectoryEntry{
 #define CDERROR -3
 #define INITERROR -4
 #define FILEDELERROR -5
-
+#define FILEREADERR -6
 
 
 
@@ -103,8 +103,8 @@ int free_cluster_index();
 
 int create_directory(const char* name);
 int create_file(const char* name, const char* ext, int size, const char* filedata);
-int read_file(const char* filename, char* buffer);
-int erase_file(const char* filename);
+int read_file(const char* filename, const char* ext, char* buffer);
+int erase_file(const char* filename, const char* ext);
 
 
 

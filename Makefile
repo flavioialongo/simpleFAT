@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror -g
 
 # Target executable
 TARGET = myfat
@@ -22,7 +22,7 @@ $(TARGET): $(OBJS)
 
 # Compile source files into object files
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -g -c $< -o $@
 
 # Clean up generated files
 clean:

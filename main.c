@@ -13,46 +13,41 @@ int main(int argc, char** argv) {
     // Initialize disk
     int res = fat_initialize(imgpath);
     if(res) goto cleanup;
-    const char file1[] = "Hello, FAT32(1)!";
-    res = create_file("HELLO", "TXT", sizeof(file1), (char*)file1);  
-    if(res) goto cleanup;
-    
-    list_directory();
-
 
     res = create_directory("TEST");
     if(res) goto cleanup;
-    
+
+    res = change_directory("TEST");
+    if(res) goto cleanup;
+    char file[12]="helloworld1";
+
+    res = create_file("HELLO", "TXT", 12, file);
+    if(res) goto cleanup;
+
+    list_directory();
+
+    res = change_directory("..");
+    if(res) goto cleanup;
     res = change_directory("TEST");
     if(res) goto cleanup;
 
-    res = create_file("TESTFI1", "TXT", sizeof(file1), (char*)file1);  
-    if(res) goto cleanup;
-    
-    res = create_file("TESTFI3", "IMG", sizeof(file1), (char*)file1);  
-    if(res) goto cleanup;
+    char *buffer=malloc(sizeof(char)*12);
+    res = read_file("HELLO", "TXT", buffer);
 
-    res = create_file("TESTFI2", "JPG", sizeof(file1), (char*)file1);  
-    if(res) goto cleanup;
+    if(res!=12) goto cleanup;
+    printf("%s\n", buffer);
 
-    res = create_directory("TESTDIR");  
+    res = erase_file("HELLO", "TXT");
     if(res) goto cleanup;
 
     list_directory();
 
-
-    res = change_directory("TESTDIR");  
-    if(res) goto cleanup;
-    
-    res = create_file("REM", "TXT", sizeof(file1), (char*)file1);
+    res = change_directory("..");
     if(res) goto cleanup;
 
     list_directory();
 
-    res = erase_file("REM");
-    if(res) goto cleanup;
-    list_directory();
-
+    printf("%d\n", free_cluster_index());
 
 cleanup:
     if(res == DIRCREATERROR){
