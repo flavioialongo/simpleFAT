@@ -2,10 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall -Werror -g
-
-# Target executable
-TARGET = myfat
+CFLAGS = -g -Wall -Werror
 
 # Source files
 SRCS = filesystem.c main.c
@@ -13,20 +10,22 @@ SRCS = filesystem.c main.c
 # Object files
 OBJS = $(SRCS:.c=.o)
 
+# Output executable
+OUTPUT = myfat
+
 # Default target
-all: $(TARGET)
+all: $(OUTPUT)
 
-# Link the target executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+$(OUTPUT): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(OUTPUT)
 
-# Compile source files into object files
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean up generated files
+# Clean target
 clean:
-	rm -f $(OBJS) $(TARGET) test.img
+	rm -f $(OUTPUT) $(OBJS) test.img
 
 # Phony targets
 .PHONY: all clean
+

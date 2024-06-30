@@ -27,27 +27,32 @@ int main(int argc, char** argv) {
 
     list_directory();
 
-    res = change_directory("..");
-    if(res) goto cleanup;
-    
-    res = change_directory("TEST");
+    res = create_file("HELLO2", "IMG", 12, file);
+    if(res)goto cleanup;
+
+    res = create_directory("DELME");
+    if(res)goto cleanup;
+
+    res = change_directory("DELME");
     if(res) goto cleanup;
 
-    res = erase_file("HELLO", "TXT");
+    res = create_file("HELLO3", "IMG", 12, file);
+    if(res)goto cleanup;
+    res = create_file("HELLO4", "IMG", 12, file);
+    if(res)goto cleanup;
+
+    res = change_directory("..");
     if(res) goto cleanup;
 
     list_directory();
 
     res = change_directory("..");
     if(res) goto cleanup;
-
-    list_directory();
 
     res = erase_dir("TEST");
     if(res) goto cleanup;
 
     list_directory();
-    printf("%d\n", free_cluster_index());
 
 cleanup:
     if(res == DIRCREATERROR){

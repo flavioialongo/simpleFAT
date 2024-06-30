@@ -77,7 +77,7 @@ int free_cluster_index();
 int create_directory(const char* name);
 int create_file(const char* name, const char* ext, int size, const char* filedata);
 int read_file(const char* filename, const char* ext, char* buffer);
-int erase_file(const char* filename, const char* ext);
+int erase_file(const char* filename, const char* ext, char is_dir);
 int erase_dir(const char* dirname);
 DirectoryEntry *get_file(const char* filename, const char* ext, char is_dir);
 char is_empty_directory(DirectoryEntry* dir);

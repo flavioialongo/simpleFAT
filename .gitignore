@@ -2,4 +2,4 @@
 .vscode/
 *.o
 *.img
-CMakeList.txt
+CMakeLists.txt
