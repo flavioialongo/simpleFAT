@@ -3,3 +3,4 @@
 *.o
 *.img
 CMakeLists.txt
+cmake-build-debug/
