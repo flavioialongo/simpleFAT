@@ -1,0 +1,3 @@
+/home/flaviolinux/Università/Sistemi Operativi/ProgettoFAT/simpleFAT/cmake-build-debug/CMakeFiles/myfat.dir
+/home/flaviolinux/Università/Sistemi Operativi/ProgettoFAT/simpleFAT/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/flaviolinux/Università/Sistemi Operativi/ProgettoFAT/simpleFAT/cmake-build-debug/CMakeFiles/rebuild_cache.dir

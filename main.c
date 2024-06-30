@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     res = change_directory("..");
     if(res) goto cleanup;
 
-    res = erase_dir("TEST");
+    res = erase_dir("TEST", 1);
     if(res) goto cleanup;
 
     list_directory();
@@ -63,16 +63,12 @@ cleanup:
         printf("Cannot create file in directory %s \n", get_current_directory()->filename);
         return -1;
     }
-    if(res == CDERROR){
-        printf("No directory found with that name\n");
-        return -1;
+    if(res == FILENOTFOUND){
+        printf("File/Directory not found in directory %s \n", get_current_directory()->filename);
     }
     if(res == INITERROR){
         printf("Initialize error\n");
         return -1;
-    }
-    if(res == FILEDELERROR){
-        printf("No file found with that name\n");
     }
 
 
