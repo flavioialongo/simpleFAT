@@ -22,7 +22,7 @@ $(TARGET): $(OBJS)
 
 # Compile source files into object files
 %.o: %.c
-	$(CC) $(CFLAGS) -g -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Clean up generated files
 clean:

@@ -23,9 +23,6 @@ typedef struct{
     // Number of bytes in a sector
 	int bytes_per_sector;
 
-    // Number of sectors in a cluster
-	int sectors_per_cluster;
-    
     // Number of FAT entries
 	int fat_entries;
     
@@ -34,27 +31,9 @@ typedef struct{
 
     // FAT size in bytes
 	int fat_size;
-
-    // Number of sectors for FAT
-    int fat_sectors;
-
-    // Number of entries in the Root Directory
-	int root_entry_count;
     
-    // Number of sectors for the Root Directory
-    int root_sectors;
-    
-    // Size in bytes of Root Directory
-    int root_size;
-
-    // Number of sectors for the Data Area
-    int data_sectors;
-
     // Size in bytes of the Data Area
     int data_size;
-
-    // Size in bytes of Directories Entry
-    int directory_size;
 
     // Total number of sectors
 	int total_sectors;
@@ -89,12 +68,6 @@ typedef struct DirectoryEntry{
 // Function to initialize a FAT-formatted "disk" 
 int fat_initialize(const char* image_path);
 
-// Function to retrieve the pointer to the root directory
-char *root_address();
-
-// Function to retrieve the pointer to the data area
-char *data_address();
-
 FATBS* get_fbs();
 DirectoryEntry* find_free_directory_entry();
 DirectoryEntry* get_current_directory();
@@ -105,7 +78,9 @@ int create_directory(const char* name);
 int create_file(const char* name, const char* ext, int size, const char* filedata);
 int read_file(const char* filename, const char* ext, char* buffer);
 int erase_file(const char* filename, const char* ext);
-
+int erase_dir(const char* dirname);
+DirectoryEntry *get_file(const char* filename, const char* ext, char is_dir);
+char is_empty_directory(DirectoryEntry* dir);
 
 
 

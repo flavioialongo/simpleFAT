@@ -7,7 +7,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-
+    FATBS* fbs = get_fbs();
+    printf("FBS SIZE: %lu\n", sizeof(*fbs));
 
     char* imgpath = argv[1];
     // Initialize disk
@@ -28,14 +29,9 @@ int main(int argc, char** argv) {
 
     res = change_directory("..");
     if(res) goto cleanup;
+    
     res = change_directory("TEST");
     if(res) goto cleanup;
-
-    char *buffer=malloc(sizeof(char)*12);
-    res = read_file("HELLO", "TXT", buffer);
-
-    if(res!=12) goto cleanup;
-    printf("%s\n", buffer);
 
     res = erase_file("HELLO", "TXT");
     if(res) goto cleanup;
@@ -47,6 +43,10 @@ int main(int argc, char** argv) {
 
     list_directory();
 
+    res = erase_dir("TEST");
+    if(res) goto cleanup;
+
+    list_directory();
     printf("%d\n", free_cluster_index());
 
 cleanup:

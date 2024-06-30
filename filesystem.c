@@ -17,18 +17,11 @@ int fat_initialize(const char* image_path){
     
     fbs = malloc(sizeof(FATBS));
     fbs->bytes_per_sector = SECTOR_SIZE;
-    fbs->root_entry_count = MAX_DIR_ENTRIES;
-    fbs->sectors_per_cluster = SECTOR_PER_CLUSTER;
     fbs->total_sectors = TOTAL_SECTORS;
-
-    fbs->cluster_size = fbs->bytes_per_sector*fbs->sectors_per_cluster;
+    fbs->cluster_size = SECTOR_SIZE*SECTOR_PER_CLUSTER;
     fbs->fat_entries = (fbs->total_sectors*fbs->bytes_per_sector)/(fbs->cluster_size);
     fbs->fat_size = fbs->fat_entries*4; // FAT32 entries are 4 bytes each
-    fbs->fat_sectors = fbs->fat_size/fbs->bytes_per_sector;
-
-    fbs->data_sectors = (fbs->total_sectors-(fbs->fat_sectors));
-    fbs->data_size = fbs->data_sectors*fbs->bytes_per_sector;
-    fbs->directory_size = DIRECTORY_SIZE;
+    fbs->data_size = (fbs->total_sectors-(fbs->fat_size/fbs->bytes_per_sector))*fbs->bytes_per_sector;
 
     int fd = open(image_path, O_RDWR | O_CREAT | O_TRUNC, 0666);
 
@@ -167,7 +160,7 @@ void list_directory() {
             DirectoryEntry* entry = &dir[i];
 
             if (entry->filename[0] == 0x00) { // Empty entry, stop reading
-                printf("\n");
+                printf("\n\n");
                 return;
             }
             if ((unsigned char)entry->filename[0] == DELETED_DIR_ENTRY) { // Deleted entry, skip
@@ -267,115 +260,132 @@ int create_directory(const char* name){
     DirectoryEntry* new_directory = (DirectoryEntry*)&data[cluster*cluster_size];
     
     memset(new_directory, 0, cluster_size);
-    //if we're creating root directory, we don't need the . and .. directories
+
+
+    //For each subdirectory, create . and .. directories
     entry->first_cluster = cluster;
     strncpy(new_directory[0].filename, ".", 8);
     new_directory[0].first_cluster = cluster;
     new_directory[0].is_directory=1;
     new_directory[0].size=0;
+    strncpy(new_directory[0].ext, "", 3);
 
     strncpy(new_directory[1].filename, "..", 8);
     new_directory[1].is_directory=1;
     new_directory[1].first_cluster = current_directory->first_cluster;
     new_directory[1].size=0;
+    strncpy(new_directory[1].ext, "", 3);
 
     printf("Directory %s created\n\n", name);
     return 0;
 }
 
+
+DirectoryEntry *get_file(const char* filename, const char* ext, char is_dir){
+
+    int entry_index = -1;
+    int cluster = current_directory->first_cluster;
+    while (cluster!=FAT_EOF) {
+        for(int i = 0; i<fbs->cluster_size/sizeof(DirectoryEntry); i++) {
+            if(strcmp(current_directory[i].filename,filename)==0 && strcmp(current_directory[i].ext, ext)==0 && current_directory[i].is_directory == is_dir){
+                entry_index = i;
+                break;
+            }
+        }
+        if(entry_index != -1) break;
+        cluster=fat[cluster];
+    }
+
+    if(entry_index == -1) return NULL;
+
+    return &current_directory[entry_index];
+}
+
+
 int erase_file(const char* filename, const char* ext){
-    int entry_index = -1;
-    int cluster = current_directory->first_cluster;
-    while (cluster!=FAT_EOF) {
-        for(int i = 0; i<fbs->cluster_size/sizeof(DirectoryEntry); i++) {
-            if(strcmp(current_directory[i].filename,filename)==0 && strcmp(current_directory[i].ext, ext)==0) {
-                entry_index = i;
-                break;
-            }
-        }
-        if(entry_index != -1) break;
-        cluster=fat[cluster];
-    }
-
-    if(entry_index == -1){
-        printf("File not found in directory %s\n", current_directory->filename);
-        return FILEDELERROR;
-    }
+    
+    DirectoryEntry *file = get_file(filename, ext, 0);
 
     int cluster_size = fbs->cluster_size;
+    int current_cluster = file->first_cluster;
 
-    int current_cluster = current_directory[entry_index].first_cluster;
-
-    printf("\nrm %s> ", filename);
-    while(current_cluster!=FAT_EOF && current_directory[entry_index].size>0){
+    printf("\nrm %s.%s> ", filename, ext);
+    while(current_cluster!=FAT_EOF && file->size>0){
         memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
         int next_cluster = fat[current_cluster];
         fat[current_cluster] = 0x00;
         current_cluster = next_cluster;
-        current_directory[entry_index].size--;
+        file->size--;
     }
 
     memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
-    current_directory[entry_index].filename[0]= DELETED_DIR_ENTRY;
+    file->filename[0]= DELETED_DIR_ENTRY;
 
     printf("DONE\n\n");
     return 0;
 }
 
-int erase_directory(const char* dirname){
-    int entry_index = -1;
-    int cluster = current_directory->first_cluster;
-    while (cluster!=FAT_EOF) {
-        for(int i = 0; i<fbs->cluster_size/sizeof(DirectoryEntry); i++) {
-            if(strcmp(current_directory[i].filename,dirname)==0 &&  current_directory[i].is_directory==1) {
-                entry_index = i;
-                break;
+char is_empty_directory(DirectoryEntry* dir){
+
+    char res=1;
+    int cluster = dir->first_cluster;
+
+    while(cluster != EOF){
+        for(int i = 0; i<fbs->cluster_size/sizeof(DirectoryEntry); i++){
+            DirectoryEntry *entry = &dir[i];
+            if(entry->filename[0]!=0x00 
+            && (unsigned char) entry->filename[0]!=DELETED_DIR_ENTRY 
+            && (strcmp(entry->filename, ".")!=0 && strcmp(entry->filename, "..")!=0 ) ){
+                return 0;
             }
         }
-        if(entry_index != -1) break;
-        cluster=fat[cluster];
+        cluster = fat[cluster];
     }
+    return res;
 
-    //TODO: if(directory_not_empty) erase_directory(dirname);
-
-
-    //TODO: delete dir
-    /*
-    if(entry_index == -1){
-        printf("File not found in directory %s\n", current_directory->filename);
-        return FILEDELERROR;
-    }
-
-    int cluster_size = fbs->cluster_size;
-
-    int current_cluster = current_directory[entry_index].first_cluster;
-
-    printf("\nrm %s> ", dirname);
-    while(current_cluster!=FAT_EOF && current_directory[entry_index].size>0){
-        memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
-        int next_cluster = fat[current_cluster];
-        fat[current_cluster] = 0x00;
-        current_cluster = next_cluster;
-        current_directory[entry_index].size--;
-    }
-
-    memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
-    current_directory[entry_index].filename[0]= DELETED_DIR_ENTRY;
-
-    printf("DONE\n\n");
-    return 0;
-    */
 }
 
 
 
+
+int erase_dir(const char* dirname){
+
+
+    printf("rmdir %s/> \n", dirname);
+    DirectoryEntry *dir = get_file(dirname, "", 1);
+
+    if(dir == NULL){
+        return FILEDELERROR;
+    }
+
+    char is_empty = is_empty_directory(dir);
+    if(is_empty){
+
+        int cluster_size = fbs->cluster_size;
+        int current_cluster = dir->first_cluster;
+        while(current_cluster!=FAT_EOF){
+            memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
+            int next_cluster = fat[current_cluster];
+            fat[current_cluster] = 0x00;
+            current_cluster = next_cluster;
+       }
+       memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
+       dir->filename[0]= DELETED_DIR_ENTRY;
+    }else{
+        printf("Directory not empty\n");
+        return FILEDELERROR;
+    }
+
+
+    return 0;
+
+
+
+}
 void print_image(unsigned int max_bytes_to_read){
-
-
     if(max_bytes_to_read>fbs->bytes_per_sector*fbs->total_sectors){
         max_bytes_to_read=fbs->bytes_per_sector*fbs->total_sectors;
     }
-
     for(int i = 0; i<max_bytes_to_read; i++){
         printf(" <%02x> ", *(fat+i));
     }
@@ -422,8 +432,5 @@ int read_file(const char* filename, const char* ext, char* buffer){
         cluster = fat[cluster];
     }
     return bytes_read;
-    
-
-
 
 }
