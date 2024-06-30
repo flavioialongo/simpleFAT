@@ -11,7 +11,7 @@ SRCS = filesystem.c main.c
 OBJS = $(SRCS:.c=.o)
 
 # Output executable
-OUTPUT = myfat
+OUTPUT = myfat.exe
 
 # Default target
 all: $(OUTPUT)
