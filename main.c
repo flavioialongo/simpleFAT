@@ -7,9 +7,6 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    FATBS* fbs = get_fbs();
-    printf("FBS SIZE: %lu\n", sizeof(*fbs));
-
     char* imgpath = argv[1];
     // Initialize disk
     int res = fat_initialize(imgpath);
@@ -20,39 +17,77 @@ int main(int argc, char** argv) {
 
     res = change_directory("TEST");
     if(res) goto cleanup;
-    char file[12]="helloworld1";
+    char file_content[12]="helloworld1";
 
-    res = create_file("HELLO", "TXT", 12, file);
+    res = create_file("HELLO", "TXT", 0, NULL);
     if(res) goto cleanup;
+    res = create_file("HELLO2", "IMG", 12, file_content);
+    if(res)goto cleanup;
 
     list_directory();
 
-    res = create_file("HELLO2", "IMG", 12, file);
-    if(res)goto cleanup;
+    FileHandle* hello1 = open_file("HELLO", "TXT");
+    FileHandle* hello2 = open_file("HELLO2", "IMG");
 
-    res = create_directory("DELME");
-    if(res)goto cleanup;
+    if(hello1 == NULL) {
+        printf("Open 1 failed\n");
+    }
+    if(hello2 == NULL) {
+        printf("Open 2 failed\n");
+    }
 
-    res = change_directory("DELME");
+    char * buffer1 = malloc(sizeof(char)*sizeof(file_content));
+    res = read_file(hello2, buffer1);
+
+    printf("READ 1: %s\n", buffer1);
+
+    res = write_file(hello1, file_content);
+
+    res = read_file(hello1, buffer1);
+
+    printf("READ 2: %s\n", buffer1);
+
+    res = seek_file(hello1, 3);
+
+    res = read_file(hello1, buffer1);
+    printf("READ 2: %s\n", buffer1);
+
+    res = write_file(hello1, file_content);
+    char * buffer2 = malloc(sizeof(char)*(sizeof(file_content)+hello1->position));
+
+    res = read_file(hello1, buffer2);
+    printf("READ 2: %s\n", buffer2);
+
+    res = seek_file(hello1, 0);
+
+
+    res = read_file(hello1, buffer2);
+    printf("READ 2: %s\n", buffer2);
+
+
+
+    char test[1024];
+    memset(test, 'b', 1022);
+    test[1023]='\0';
+
+    res = create_file("HELLO3", "TXT", 0, NULL);
     if(res) goto cleanup;
 
-    res = create_file("HELLO3", "IMG", 12, file);
-    if(res)goto cleanup;
-    res = create_file("HELLO4", "IMG", 12, file);
-    if(res)goto cleanup;
+    FileHandle *hello3 = open_file("HELLO3", "TXT");
 
-    res = change_directory("..");
-    if(res) goto cleanup;
+    res = write_file(hello3, test);
+    char * buffer3 = malloc(1024*sizeof(char));
+    res = read_file(hello3, buffer3);
+
+    printf("READ 3: %s\n", buffer3);
+
+
+    res = erase_file("HELLO3", "TXT");
+    printf("TEST: %d\n", free_cluster_index());
 
     list_directory();
 
-    res = change_directory("..");
-    if(res) goto cleanup;
 
-    res = erase_dir("TEST", 1);
-    if(res) goto cleanup;
-
-    list_directory();
 
 cleanup:
     if(res == DIRCREATERROR){

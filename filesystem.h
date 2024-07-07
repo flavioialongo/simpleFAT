@@ -41,18 +41,19 @@ typedef struct{
 #define DIRECTORY_SIZE 32
 #define DELETED_DIR_ENTRY 0xE5
 
-typedef struct DirectoryEntry{
+typedef struct{
     char filename[8];           // Filename (8 characters)
     char ext[3];                // Extension (3 characters)
-
-    char is_directory;     
-
-    struct DirectoryEntry* parent_directory;     
+    bool is_directory;
     int first_cluster;     // First cluster number
     int size;              // File size in bytes
-    int entry_count;
 } __attribute__((packed)) DirectoryEntry;
 
+typedef struct {
+    DirectoryEntry* entry;    // Reference to the file's directory entry
+    int position;        // Current position in the file
+    int current_cluster; // Current cluster being accessed
+} FileHandle;
 
 #define DIRCREATERROR -1
 #define FILECREATERROR -2
@@ -64,7 +65,8 @@ typedef struct DirectoryEntry{
 
 
 /*
-    ALL FUNCTIONS RETURN 0 IF NO ERRORS OCCUR
+    ALL FUNCTIONS EXCEPT WRITE/READ RETURN 0 IF NO ERRORS OCCUR
+    WRITE/READ RETURNS NUMBER OF BYTES WRITTEN/READ
 */
 
 
@@ -73,8 +75,6 @@ typedef struct DirectoryEntry{
     If errors occur INITERROR is returned 
 */ 
 int fat_initialize(const char* image_path);
-
-
 
 /*
     Returns the pointer to the current directory
@@ -86,14 +86,11 @@ DirectoryEntry* get_current_directory();
 */
 FATBS* get_fbs();
 
-
 /*
     Returns the pointer to an empty slot in the current directory
     If no entries, returns NULL
 */
 DirectoryEntry* find_free_directory_entry();
-
-
 
 /*
     Returns the index of the first free cluster 
@@ -113,13 +110,6 @@ int create_directory(const char* name);
 int create_file(const char* name, const char* ext, int size, const char* filedata);
 
 /*
-    Read the content in the file "filename.ext" and saves it in a buffer 
-    memory for buffer should be allocated
-*/
-int read_file(const char* filename, const char* ext, char* buffer);
-
-
-/*
     Removes the file "filename.ext" in the current directory
     If file is not found, returns FILENOTFOUND
 */
@@ -134,21 +124,13 @@ int erase_file(const char* filename, const char* ext);
 */
 int erase_dir(const char* dirname, int rf);
 
-
-/*
-    Ausiliary function to get the pointer to the wanted file/directory
-    If is_dir == 1, just search for DirectorEntry files with is_directory set to 1
-*/
-DirectoryEntry *get_file(const char* filename, const char* ext, char is_dir);
-
 /*
     Returns true if the directory is empty
 */
 bool is_empty_directory(DirectoryEntry* dir);
 
-
 /*
-    Sets the current directory to dir_name 
+    Sets the current directory to dir_name
     dir_name/ should be in the current directory
     if not found FILENOTFOUND is returned
 */
@@ -160,6 +142,43 @@ int change_directory(const char* dir_name);
 */
 void list_directory();
 
+/*
+    Ausiliary function to get the pointer to the wanted file/directory
+    If is_dir == 1, just search for DirectorEntry with is_directory set to 1
+*/
+DirectoryEntry *get_file(const char* filename, const char* ext, bool is_dir);
+
+/*
+    Writes buffer content in the file
+    Returns number of bytes written
+    This function can expand the file size
+    Returns number of bytes written
+*/
+int write_file(FileHandle* file, char* buffer);
+
+/*
+    Read the content in the file "filename.ext" and saves it in a buffer
+    memory for buffer should be allocated
+    Returns number of bytes read
+*/
+int read_file(FileHandle* file, char* buffer);
+
+/*
+    Changes the position and the current cluster in the FileHandle
+    Position is relative to current cluster:
+    e.g. ClusterSize 512bytes, offset 513:
+            FileHandle current_cluster is the second cluster in the chain
+            FileHandle position is 1
+
+    Returns -1 if offset is greater than the file size
+*/
+int seek_file(FileHandle* file, int offset);
+
+/*
+    Opens a file in the current directory
+    Returns a FileHandle* if no errors occur, NULL otherwise
+*/
+FileHandle *open_file(const char* filename, const char* ext);
 
 /*
     Ausiliary function to print hexadecimal values of the img file
