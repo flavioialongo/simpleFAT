@@ -319,6 +319,7 @@ void help(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     printf("ls: list all the files in the current directory.\n");
     printf("rm: remove a file or an empty directory.\n");
     printf("rmf: remove a file or a not empty directory.\n");
+    printf("copy: copies a file from your operating system into the created filesystem.\n");
     printf("help: command inception.\n");
     printf("exit: exit the shell.\n");
 }
