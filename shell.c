@@ -1,3 +1,4 @@
+#include <iso646.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +16,7 @@ char current_dir[8];
 
 void parse_filename(char* argv, char **filename, char **ext){
 
-    char sep[2]=".";
+    char sep[2]=".\n";
     char *fn = malloc(sizeof(char)*8);
     char *fe = malloc(sizeof(char)*3);
 
@@ -28,7 +29,7 @@ void parse_filename(char* argv, char **filename, char **ext){
     if(token != 0){
         strcpy(fn, token);
     }
-    token = strtok(NULL, ".");
+    token = strtok(NULL, sep);
     if(token != 0){
         strcpy(fe, token);
     }
@@ -86,6 +87,7 @@ void my_write(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     printf("Enter text: ");
     char* str = calloc(MAX_INPUT_SIZE, sizeof(char));
     fgets(str, MAX_INPUT_SIZE, stdin);
+
     str[strlen(str) - 1] = 0x00;
     ret = write_file(fh, str);
     if (ret!=strlen(str)+1) {
@@ -242,14 +244,65 @@ void rmf(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
         printf("Usage: rmf <dirname>\n");
         return;
     }
-    
-    if (strcmp(argv[1], "/") == 0) {
-        printf("Maybe another day\n");
-        return;
-    }
-
     erase_dir(argv[1], true);
 }
+
+void copy_file_sh(int argc, char* argv[MAX_ARGUMENTS_NUM+1]){
+
+    if(argc!=2){
+        printf("Usage: copy <filename>\n");
+        return;
+    }
+    FILE* file = fopen(argv[1], "r");
+    if(file==NULL){
+        printf("An error occurred in finding file %s\n", argv[1]);
+        return;
+    }
+    int res = fseek(file, 0, SEEK_END);
+    if(res == -1) {
+        printf("An error occurred while retrieving file stats\n");
+        return;
+    }
+    int filesize = ftell(file);
+    if(filesize == -1) {
+        printf("An error occurred while retrieving file stats\n");
+        return;
+    }
+    res = fseek(file, 0, SEEK_SET);
+    if(res == -1) {
+        printf("An error occurred while retrieving file stats\n");
+        return;
+    }
+    char * buffer = malloc(sizeof(char)*filesize);
+    char new_file_name[1024];
+    printf("Insert the filename for the new filesystem: ");
+    fgets(new_file_name, 1024, stdin);
+    new_file_name[strcspn(new_file_name, "\n")] = 0;
+    int bytes_read=0;
+    while(bytes_read<filesize){
+        bytes_read+=fread(buffer, 1, filesize, file);
+    }
+
+
+
+
+    char *fn;
+    char* fe;
+    parse_filename(new_file_name, &fn, &fe);
+    res = create_file(fn, fe, filesize, buffer);
+
+    if(res==-1) {
+        printf("An error occurred while creating the file in the filesystem\n");
+        free((void*)fn);
+        free((void*)fe);
+        return;
+    }
+    free((void*)fn);
+    free((void*)fe);
+}
+
+
+
 
 void help(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     
@@ -281,10 +334,16 @@ void do_command_loop(void) {
         int argc=0;
         argv[0] = strtok(command, " ");
         if(argv[0]!=NULL) argc++;
-        argv[1] = strtok(NULL, " ");
-        if(argv[1]!=NULL) argc++;
-        argv[2] = strtok(NULL, "\n");
-        if(argv[2]!=NULL) argc++;
+
+        if(strcmp(argv[0], "copy")==0){
+            argv[1] = strtok(NULL, "\n");
+            if(argv[1]!=NULL) argc++;
+        }else{
+            argv[1] = strtok(NULL, " ");
+            if(argv[1]!=NULL) argc++;
+            argv[2] = strtok(NULL, "\n");
+            if(argv[2]!=NULL) argc++;
+        }
 
         if (argv[1] == NULL) 
             argv[0][strlen(argv[0]) - 1] = 0x00;
@@ -312,12 +371,14 @@ void do_command_loop(void) {
         }
         else if (strcmp(argv[0], "rmf") == 0) {
             rmf(argc, argv); 
+        }else if(strcmp(argv[0], "copy")==0){
+            copy_file_sh(argc, argv);
         }
         else if (strcmp(argv[0], "help") == 0) {
             help(argc, argv); 
         }
         else if (strcmp(argv[0], "exit") == 0) {
-            printf("Cyaa!\n");
+            printf("Goodbye!\n");
             exit(EXIT_SUCCESS);
         }
         else {
