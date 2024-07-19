@@ -190,7 +190,8 @@ int create_file(const char* name, const char* ext, int size, const char* filedat
     int clusters_needed = (size + cluster_size) / cluster_size;
     int current_cluster = cluster;
 
-    for(int i = 0; i < clusters_needed; i++){
+    int i;
+    for(i = 0; i < clusters_needed; i++){
 
         //handle empty initialization
         if(filedata == NULL) {
@@ -201,7 +202,7 @@ int create_file(const char* name, const char* ext, int size, const char* filedat
 
         
         int next_cluster = free_cluster_index();
-
+        fat[next_cluster]=FAT_INUSE;
         // The last cluster is marked as 0xFFFFFFF8
         if(i == clusters_needed - 1){
             next_cluster = FAT_EOF;
@@ -447,7 +448,6 @@ int read_file(FileHandle* file, char* buffer){
     int file_size = file->entry->size;
 
     bool is_first_cluster = true;
-
     while(cluster!=FAT_EOF && file_size>0){
 
         // If the file size > cluster size (i.e. 512 bytes) we read 512 bytes and continue the while loop
@@ -534,4 +534,3 @@ int write_file(FileHandle* file, char* buffer) {
 
     return bytes_written;
 }
-

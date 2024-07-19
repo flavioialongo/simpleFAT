@@ -185,6 +185,16 @@ FileHandle *open_file(const char* filename, const char* ext);
 */
 void close_file(FileHandle* file);
 
+
+/*
+    Copies the content of a file in the operating system
+    in the created filesystem
+*/
+int copy_file(FILE* file, const char* filename, const char* ext);
+
+
+
+
 /*
     Ausiliary function to print hexadecimal values of the img file
 */
