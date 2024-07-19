@@ -118,11 +118,11 @@ int erase_file(const char* filename, const char* ext);
 /*
 
     Removes the directory "dirname/"
-    If rf = 1 recursively remove everything
-    If rf = 0 and directory is not empty, returns DIRNOTEMPTY
+    If rf = true recursively remove everything
+    If rf = false and directory is not empty, returns DIRNOTEMPTY
     If directory is not found, returns FILENOTFOUND
 */
-int erase_dir(const char* dirname, int rf);
+int erase_dir(const char* dirname, bool rf);
 
 /*
     Returns true if the directory is empty
@@ -179,6 +179,11 @@ int seek_file(FileHandle* file, int offset);
     Returns a FileHandle* if no errors occur, NULL otherwise
 */
 FileHandle *open_file(const char* filename, const char* ext);
+
+/*
+    Closes a previously opened file
+*/
+void close_file(FileHandle* file);
 
 /*
     Ausiliary function to print hexadecimal values of the img file
