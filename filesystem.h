@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include <math.h>
 
 #define SECTOR_SIZE 512
 #define SECTOR_PER_CLUSTER 1
@@ -51,8 +51,9 @@ typedef struct{
 
 typedef struct {
     DirectoryEntry* entry;    // Reference to the file's directory entry
-    int position;        // Current position in the file
-    int current_cluster; // Current cluster being accessed
+    int position;             // Current position in the file, relative to the cluster
+    int current_cluster;      // Current cluster being accessed
+    int offset;
 } FileHandle;
 
 #define DIRCREATERROR -1
@@ -75,6 +76,14 @@ typedef struct {
     If errors occur INITERROR is returned 
 */ 
 int fat_initialize(const char* image_path);
+
+
+/*
+    Removes the fat mmap and closes the file descriptor
+*/
+int fat_close();
+
+
 
 /*
     Returns the pointer to the current directory
@@ -156,6 +165,16 @@ DirectoryEntry *get_file(const char* filename, const char* ext, bool is_dir);
 */
 int write_file(FileHandle* file, char* buffer);
 
+
+/*
+    Frees the memory no more used by the file
+*/
+void remove_unused(FileHandle* file);
+
+
+
+
+
 /*
     Read the content in the file "filename.ext" and saves it in a buffer
     memory for buffer should be allocated
@@ -193,6 +212,10 @@ void close_file(FileHandle* file);
 int copy_file(FILE* file, const char* filename, const char* ext);
 
 
+/*
+    Prints space used in Kbytes
+*/
+void print_used_space();
 
 
 /*

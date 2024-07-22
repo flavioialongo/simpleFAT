@@ -94,7 +94,6 @@ void my_write(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
         fprintf(stderr, "An error occurred in writing in file.\n");
         free((void*)filename);
         free((void*)ext);
-        free(ext);
         close_file(fh);
         return;
     }
@@ -277,7 +276,6 @@ void copy_file_sh(int argc, char* argv[MAX_ARGUMENTS_NUM+1]){
     char new_file_name[1024];
     printf("Insert the filename for the new filesystem: ");
     fgets(new_file_name, 1024, stdin);
-    new_file_name[strcspn(new_file_name, "\n")] = 0;
     int bytes_read=0;
     while(bytes_read<filesize){
         bytes_read+=fread(buffer, 1, filesize, file);
@@ -320,6 +318,7 @@ void help(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     printf("rm: remove a file or an empty directory.\n");
     printf("rmf: remove a file or a not empty directory.\n");
     printf("copy: copies a file from your operating system into the created filesystem.\n");
+    printf("space: prints how much space is used in KBytes");
     printf("help: command inception.\n");
     printf("exit: exit the shell.\n");
 }
@@ -374,12 +373,18 @@ void do_command_loop(void) {
             rmf(argc, argv); 
         }else if(strcmp(argv[0], "copy")==0){
             copy_file_sh(argc, argv);
+        }else if(strcmp(argv[0], "space")==0){
+            print_used_space();
         }
         else if (strcmp(argv[0], "help") == 0) {
             help(argc, argv); 
         }
         else if (strcmp(argv[0], "exit") == 0) {
             printf("Goodbye!\n");
+            if(fat_close()){
+                printf("An error occurred while closing the mmap\n");
+                continue;
+            }
             exit(EXIT_SUCCESS);
         }
         else {
@@ -392,14 +397,13 @@ void do_command_loop(void) {
 int main(int argc, char * argv[]) {
  
     int res = fat_initialize("disk.img");
-
-    strcpy(current_dir, get_current_directory()->filename);
     
     if (res) {
         fprintf(stderr, "[ERROR] Cannot initialize file system.\n");
         exit(EXIT_FAILURE);
     }
-    
+    strcpy(current_dir, get_current_directory()->filename);
+
     printf("Welcome, run 'help' to see available commands!\n");
     do_command_loop();
     return 0;

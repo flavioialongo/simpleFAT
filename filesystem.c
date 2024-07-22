@@ -6,6 +6,7 @@ FATBS *fbs;             //FAT boot sector
 DirectoryEntry *current_directory;
 char *data;
 int *fat;
+int image_file_fd;
 
 /*
     Initializes FAT by mapping a memory location.
@@ -13,20 +14,20 @@ int *fat;
 */
 int fat_initialize(const char* image_path){
     
-    int fd = open(image_path, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    image_file_fd = open(image_path, O_RDWR | O_CREAT | O_TRUNC, 0666);
 
 
 
-    if(fd==-1){
+    if(image_file_fd==-1){
         return INITERROR;
     }
-    if(ftruncate(fd, TOTAL_SECTORS*SECTOR_SIZE)){
+    if(ftruncate(image_file_fd, TOTAL_SECTORS*SECTOR_SIZE)){
         return INITERROR;
     }
 
     
 
-    image_file = mmap(NULL, TOTAL_SECTORS*SECTOR_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    image_file = mmap(NULL, TOTAL_SECTORS*SECTOR_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, image_file_fd, 0);
 
     if(image_file == MAP_FAILED){
         return INITERROR;
@@ -62,6 +63,19 @@ int fat_initialize(const char* image_path){
     fat[0]=FAT_EOF;
     return 0;
 }
+
+int fat_close(){
+    fbs = NULL;
+    data = NULL;
+    fat = NULL;
+
+    if(munmap(image_file, TOTAL_SECTORS*SECTOR_SIZE)==-1){
+        return -1;
+    }
+    close(image_file_fd);
+    return 0;
+}
+
 
 DirectoryEntry* get_current_directory(){
     return current_directory;
@@ -202,10 +216,12 @@ int create_file(const char* name, const char* ext, int size, const char* filedat
 
         
         int next_cluster = free_cluster_index();
-        fat[next_cluster]=FAT_INUSE;
+
         // The last cluster is marked as 0xFFFFFFF8
         if(i == clusters_needed - 1){
             next_cluster = FAT_EOF;
+        }else {
+            fat[next_cluster]=FAT_INUSE;
         }
 
         //update fat
@@ -290,13 +306,15 @@ int erase_file(const char* filename, const char* ext){
     }
     int cluster_size = fbs->cluster_size;
     int current_cluster = file->first_cluster;
+    while(current_cluster!= FAT_EOF){
 
-    while(current_cluster!=FAT_EOF && file->size>0){
+        int size_to_subtract = (file->size>cluster_size) ? cluster_size : file->size;
         memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
+        file->size-=size_to_subtract;
+
         int next_cluster = fat[current_cluster];
-        fat[current_cluster] = 0x00;
+        fat[current_cluster] = FAT_EMPTY;
         current_cluster = next_cluster;
-        file->size--;
     }
     file->filename[0]= DELETED_DIR_ENTRY;
 
@@ -310,7 +328,7 @@ void erase_empty_directory(DirectoryEntry* dir){
     while(current_cluster!=FAT_EOF){
         memset(&data[current_cluster*cluster_size], 0x00000000, cluster_size);
         int next_cluster = fat[current_cluster];
-        fat[current_cluster] = 0x00;
+        fat[current_cluster] = FAT_EMPTY;
         current_cluster = next_cluster;
     }
     dir->filename[0]= DELETED_DIR_ENTRY;
@@ -407,6 +425,7 @@ FileHandle *open_file(const char* filename, const char* ext) {
     file->entry = entry;
     file->current_cluster = entry->first_cluster;
     file->position = 0;
+    file->offset = 0;
     return file;
 }
 
@@ -414,6 +433,7 @@ void close_file(FileHandle* file){
     file->entry=NULL;
     file->current_cluster=0;
     file->position=0;
+    file->offset = 0;
     free(file);
 }
 
@@ -422,7 +442,7 @@ int seek_file(FileHandle* file, int offset) {
     if(offset>file->entry->size) {
         return -1;
     }
-
+    file->offset = offset;
     int cluster_index = offset/fbs->cluster_size;
     int current_cluster = file->current_cluster;
     for(int i = 0; i<cluster_index; i++) {
@@ -471,44 +491,50 @@ int read_file(FileHandle* file, char* buffer){
 
 int write_file(FileHandle* file, char* buffer) {
 
-    int file_size = file->entry->size;
     int buffer_size = strlen(buffer)+1;
     int bytes_written = 0;
     int clusters_to_add = 0;
     int cluster_size = fbs->cluster_size;
-    // Expand file size
-    if(buffer_size+file->position>file_size) {
-        file->entry->size = buffer_size + file->position;
-        // We round up es. 513 bytes require 2 clusters
-        clusters_to_add =  (buffer_size+file->position)/fbs->cluster_size;
-        if(clusters_to_add!=0) {
-            int new_cluster_chain_index = free_cluster_index();
-            // expand file size
-            for(int i = 0; i<clusters_to_add; i++) {
-                memset(&data[new_cluster_chain_index*cluster_size], 0, cluster_size);
-                int next_cluster = free_cluster_index();
-                // The last cluster is marked as 0xFFFFFFF8
-                if(i == clusters_to_add - 1){
-                    next_cluster = FAT_EOF;
-                    fat[new_cluster_chain_index] = next_cluster;
-                    break;
-                }
-                //update fat
-                fat[new_cluster_chain_index] = next_cluster;
-                new_cluster_chain_index = next_cluster;
-            }
 
-            int current_cluster = file->entry->first_cluster;
-            //append new cluster chain
-            while(current_cluster != FAT_EOF) {
-                if(fat[current_cluster] == FAT_EOF) {
-                    fat[current_cluster] = new_cluster_chain_index;
-                    break;
-                }
-                current_cluster = fat[current_cluster];
+    int already_allocated_clusters = (file->entry->size) / fbs->cluster_size;
+
+
+    if(file->offset+buffer_size<file->entry->size) {
+        file->entry->size = file->offset+buffer_size;
+        remove_unused(file);
+    }
+    file->entry->size = file->offset+buffer_size;
+    if((buffer_size+file->offset)/fbs->cluster_size!=0) {
+        clusters_to_add = (buffer_size+file->offset)/fbs->cluster_size-already_allocated_clusters;
+    }
+    // We round up es. 513 bytes require 2 clusters
+    if(clusters_to_add!=0) {
+        int new_cluster_chain_index = free_cluster_index();
+        fat[new_cluster_chain_index] = FAT_INUSE;
+        // expand file size
+        for(int i = 0; i<clusters_to_add; i++) {
+            memset(&data[new_cluster_chain_index*cluster_size], 0, cluster_size);
+            int next_cluster = free_cluster_index();
+            // The last cluster is marked as 0xFFFFFFF8
+            if(i == clusters_to_add - 1){
+                next_cluster = FAT_EOF;
+                fat[new_cluster_chain_index] = next_cluster;
+                break;
             }
+            fat[next_cluster]=FAT_INUSE;
+            //update fat
+            fat[new_cluster_chain_index] = next_cluster;
         }
 
+        int current_cluster = file->entry->first_cluster;
+        //append new cluster chain
+        while(current_cluster != FAT_EOF) {
+            if(fat[current_cluster] == FAT_EOF) {
+                fat[current_cluster] = new_cluster_chain_index;
+                break;
+            }
+            current_cluster = fat[current_cluster];
+        }
     }
 
     int current_cluster = file->current_cluster;
@@ -520,7 +546,7 @@ int write_file(FileHandle* file, char* buffer) {
         // In order to support write after a seek, if we're writing in the first
         // cluster of the FileHandler, we need to take care of the offset
         if(is_first_cluster) {
-            bytes_to_write = (buffer_size > cluster_size-file->position) ? cluster_size : buffer_size;
+            bytes_to_write = (buffer_size > cluster_size-file->position) ? cluster_size-file->position : buffer_size;
             memcpy(&data[current_cluster*cluster_size+file->position], buffer + bytes_written, bytes_to_write);
             is_first_cluster = false;
         }else {
@@ -528,9 +554,51 @@ int write_file(FileHandle* file, char* buffer) {
             memcpy(&data[current_cluster*cluster_size], buffer + bytes_written, bytes_to_write);
         }
         bytes_written += bytes_to_write;
-        buffer_size -= bytes_written;
+        buffer_size -= bytes_to_write;
         current_cluster = fat[current_cluster];
     }
 
     return bytes_written;
+}
+
+
+
+void remove_unused(FileHandle* file) {
+
+    int current_cluster = file->entry->first_cluster;
+    int file_size = file->entry->size;
+
+    // no round up because the file always has at least 1 cluster allocated
+    int clusters_needed = file_size/fbs->cluster_size;
+
+    while(clusters_needed>0) {
+        clusters_needed--;
+        current_cluster=fat[current_cluster];
+    }
+
+    //Now the next clusters are no more used, so we free them
+    int last_effective_cluster = current_cluster;
+    while(fat[current_cluster]!=FAT_EOF) {
+        int next = fat[current_cluster];
+        fat[current_cluster]=FAT_EMPTY;
+        current_cluster = next;
+    }
+    fat[current_cluster]=FAT_EMPTY;
+    fat[last_effective_cluster]=FAT_EOF;
+    return;
+}
+
+void print_used_space(){
+
+    long int count=0;
+    for(int i = 1; i<fbs->fat_entries; i++){
+        if(fat[i]!=FAT_EMPTY){
+            count+=512;
+        }
+    }
+
+    count = count/pow(2,10);
+
+    printf("Used space: %ld KB\n", count);
+
 }
