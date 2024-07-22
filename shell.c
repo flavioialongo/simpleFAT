@@ -339,7 +339,7 @@ void do_command_loop(void) {
             argv[1] = strtok(NULL, "\n");
             if(argv[1]!=NULL) argc++;
         }else{
-            argv[1] = strtok(NULL, " ");
+            argv[1] = strtok(NULL, " \n");
             if(argv[1]!=NULL) argc++;
             argv[2] = strtok(NULL, "\n");
             if(argv[2]!=NULL) argc++;
