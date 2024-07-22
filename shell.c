@@ -50,7 +50,7 @@ void mkdir(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
 
     int ret = create_directory(argv[1]);
     if (ret == -1) 
-        fprintf(stderr, "An error occurred in creating new directory.\n");
+        printf("An error occurred while creating new directory.\n");
 }
 
 /*
@@ -69,7 +69,7 @@ void my_write(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     if (fh == NULL) {
         free((void*)filename);
         free((void*)ext);
-        fprintf(stderr, "An error occurred in opening file.\n");
+        printf("An error occurred while opening file.\n");
         return;
     }
 
@@ -77,7 +77,7 @@ void my_write(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     int starting_point = atoi(argv[1]);
     ret = seek_file(fh, starting_point);
     if (ret) {
-        fprintf(stderr, "An error occurred in seeking in file.\n");
+        printf("An error occurred while seeking file.\n");
         free((void*)filename);
         free((void*)ext);
         close_file(fh);
@@ -91,7 +91,7 @@ void my_write(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     str[strlen(str) - 1] = 0x00;
     ret = write_file(fh, str);
     if (ret!=strlen(str)+1) {
-        fprintf(stderr, "An error occurred in writing in file.\n");
+        printf("An error occurred while writing file.\n");
         free((void*)filename);
         free((void*)ext);
         close_file(fh);
@@ -119,7 +119,7 @@ void cat(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
 
     FileHandle* fh = open_file(filename, ext);
     if (fh == NULL) {
-        fprintf(stderr, "An error occurred in opening file.\n");
+        printf("An error occurred while opening file.\n");
         free((void*)filename);
         free((void*)ext); 
         return;
@@ -128,7 +128,7 @@ void cat(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     int starting_point = atoi(argv[1]);
     ret = seek_file(fh, starting_point);
     if (ret) {
-        fprintf(stderr, "An error occurred in seeking in file.\n");
+        printf("An error occurred while seeking.\n");
         free((void*)filename);
         free((void*)ext);
         close_file(fh);
@@ -138,7 +138,7 @@ void cat(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     char *buffer = malloc(sizeof(char)*size);
     ret = read_file(fh, buffer);
     if (ret!=size) {
-        fprintf(stderr, "An error occurred in reading from file.\n");
+        printf("An error occurred while reading from file.\n");
         free(buffer);
         free((void*)filename);
         free((void*)ext); 
@@ -169,7 +169,7 @@ void touch(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
 
     int ret = create_file(filename, ext, 0, NULL);
     if (ret){
-        fprintf(stderr, "An error occurred in creating new file.\n");
+        fprintf(stderr, "An error occurred while creating new file.\n");
         free((void*)filename);
         free((void*)ext); 
     }
@@ -189,7 +189,7 @@ void cd(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     
     int ret = change_directory(argv[1]);
     if (ret) 
-        fprintf(stderr, "An error occurred in changing directory.\n");
+        printf("An error occurred while changing directory.\n");
     
     strcpy(current_dir, get_current_directory()->filename);
 }
@@ -227,7 +227,7 @@ void rm(int argc, char* argv[MAX_ARGUMENTS_NUM + 1]) {
     if (ret){
         free((void*)filename);
         free((void*)ext); 
-        fprintf(stderr, "An error occurred in removing.\n");
+        printf("An error occurred while removing.\n");
     }
     free((void*)filename);
     free((void*)ext); 
@@ -254,7 +254,7 @@ void copy_file_sh(int argc, char* argv[MAX_ARGUMENTS_NUM+1]){
     }
     FILE* file = fopen(argv[1], "r");
     if(file==NULL){
-        printf("An error occurred in finding file %s\n", argv[1]);
+        printf("An error occurred while opening file %s\n", argv[1]);
         return;
     }
     int res = fseek(file, 0, SEEK_END);
