@@ -6,13 +6,10 @@ CFLAGS = -g -Wall -Werror
 
 # Source files
 SRCS = filesystem.c shell.c
-TESTSRC = filesystem.c main.c
 # Object files
 OBJS = $(SRCS:.c=.o)
 # Output executable
 OUTPUT = myfat.exe
-
-TESTOUTPUT = test.exe
 # Default target
 all: $(OUTPUT)
 
@@ -22,13 +19,9 @@ $(OUTPUT): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-
-# Test target
-test: 
-	$(CC) $(CFLAGS) $(TESTSRC) -o $(OUTPUT)
 # Clean target
 clean:
-	rm -f $(OUTPUT) $(OBJS) test.img
+	rm -f $(OUTPUT) $(OBJS)
 
 # Phony targets
 .PHONY: all clean
